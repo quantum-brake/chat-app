@@ -1,0 +1,59 @@
+---
+- name: Deploy chat-app
+  hosts: all
+  become: true
+  vars:
+    docker_compose_version: "1.29.2"
+    project_repo: "https://github.com/quantum-brake/chat-app"
+    project_path: "/opt/chat-app"
+
+  tasks:
+
+    - name: Install required packages
+      apt:
+        name:
+          - git
+          - docker.io
+          - curl
+        state: present
+        update_cache: yes
+
+    - name: Enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Docker Compose
+      shell: |
+        curl -L "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+
+    - name: Verify Docker version
+      shell: docker --version
+      register: docker_ver
+    - debug:
+        var: docker_ver.stdout
+
+    - name: Verify Docker Compose version
+      shell: docker-compose --version
+      register: docker_compose_ver
+    - debug:
+        var: docker_compose_ver.stdout
+
+    - name: Clone chat-app repository
+      git:
+        repo: "{{ project_repo }}"
+        dest: "{{ project_path }}"
+        version: main
+        force: yes
+
+    - name: Build and start chat-app containers
+      shell: docker-compose up -d --build
+      args:
+        chdir: "{{ project_path }}"
+
+    - name: Initialize Database
+      shell: docker-compose exec backend python manage.py reset_db
+      args:
+        chdir: "{{ project_path }}"

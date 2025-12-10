@@ -46,7 +46,6 @@ function App() {
   }, [messages]);
   return (
     <div className="App">
-	<h1>Igor Kostetskyi</h1>
       {messages.length !== 0 ? (
         <Messages messages={messages} />
       ) : (
